@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tesla Vision | Investment Platform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body { margin:0; background:#0b1220; color:#e5e7eb; }
+
+.hidden { display:none; }
+
+nav {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:18px 40px; background:#020617;
+}
+nav h1 { color:#38bdf8; margin:0; }
+
+button {
+    padding:10px 16px; border:none; border-radius:6px;
+    font-weight:bold; cursor:pointer;
+}
+.invest { background:#22c55e; }
+.withdraw { background:#ef4444; }
+.logout { background:#64748b; }
+
+.container { padding:40px; }
+
+.card {
+    background:#020617; padding:20px; border-radius:10px; margin-bottom:20px;
+}
+
+input {
+    width:100%; padding:10px; margin:6px 0;
+    border-radius:6px; border:none;
+}
+
+table {
+    width:100%; border-collapse:collapse;
+}
+th, td {
+    padding:12px; border-bottom:1px solid #1e293b;
+}
+th { color:#38bdf8; text-align:left; }
+
+/* LOGIN */
+#loginBox {
+    height:100vh; display:flex; justify-content:center; align-items:center;
+}
+#loginBox .card { width:320px; text-align:center; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginBox">
+    <div class="card">
+        <h2 style="color:#38bdf8;">Tesla Vision Login</h2>
+        <input id="loginUser" placeholder="Username">
+        <input id="loginPass" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p style="font-size:12px;color:#94a3b8;">Demo system only</p>
+    </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+<nav>
+    <h1>Tesla Vision</h1>
+    <div>
+        <span id="currentUser"></span>
+        <button class="logout" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+
+<!-- USER DASHBOARD -->
+<div id="userPanel" class="hidden">
+    <div class="card">
+        <h3>Available Balance</h3>
+        <h1 id="balance">$0.00</h1>
+        <button class="invest" onclick="deposit()">Deposit</button>
+        <button class="withdraw" onclick="withdraw()">Withdraw</button>
+    </div>
+
+    <div class="card">
+        <h3>Transaction History</h3>
+        <table>
+            <thead>
+                <tr><th>Type</th><th>Amount</th></tr>
+            </thead>
+            <tbody id="history"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel" class="hidden">
+    <div class="card">
+        <h3>Admin — User Management</h3>
+        <table>
+            <thead>
+                <tr><th>User</th><th>Balance</th><th>Set Balance</th></tr>
+            </thead>
+            <tbody id="adminUsers"></tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script>
+// INITIAL DATA
+if (!localStorage.users) {
+    localStorage.users = JSON.stringify({
+        admin:{ pass:"admin123", role:"admin" },
+        user1:{ pass:"1234", role:"user", balance:5248930, history:[] },
+        user2:{ pass:"1234", role:"user", balance:2100000, history:[] }
+    });
+}
+
+let current = null;
+
+function login() {
+    const u = loginUser.value;
+    const p = loginPass.value;
+    const users = JSON.parse(localStorage.users);
+
+    if (users[u] && users[u].pass === p) {
+        current = u;
+        document.getElementById("loginBox").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        document.getElementById("currentUser").innerText = u;
+        users[u].role === "admin" ? showAdmin() : showUser();
+    } else alert("Invalid login");
+}
+
+function logout() {
+    location.reload();
+}
+
+function showUser() {
+    userPanel.classList.remove("hidden");
+    adminPanel.classList.add("hidden");
+    updateUser();
+}
+
+function showAdmin() {
+    adminPanel.classList.remove("hidden");
+    userPanel.classList.add("hidden");
+    loadAdmin();
+}
+
+function updateUser() {
+    const users = JSON.parse(localStorage.users);
+    balance.innerText = "$" + users[current].balance.toLocaleString();
+    history.innerHTML = users[current].history.map(
+        h => `<tr><td>${h.type}</td><td>$${h.amount.toLocaleString()}</td></tr>`
+    ).join("");
+}
+
+function deposit() {
+    const amt = +prompt("Enter deposit amount");
+    if (!amt) return;
+    const users = JSON.parse(localStorage.users);
+    users[current].balance += amt;
+    users[current].history.unshift({type:"Deposit", amount:amt});
+    localStorage.users = JSON.stringify(users);
+    updateUser();
+}
+
+function withdraw() {
+    const amt = +prompt("Enter withdrawal amount");
+    const users = JSON.parse(localStorage.users);
+    if (amt > users[current].balance) return alert("Insufficient balance");
+    users[current].balance -= amt;
+    users[current].history.unshift({type:"Withdraw", amount:amt});
+    localStorage.users = JSON.stringify(users);
+    updateUser();
+}
+
+function loadAdmin() {
+    const users = JSON.parse(localStorage.users);
+    adminUsers.innerHTML = Object.keys(users)
+        .filter(u => users[u].role === "user")
+        .map(u => `
+        <tr>
+            <td>${u}</td>
+            <td>$${users[u].balance.toLocaleString()}</td>
+            <td><button onclick="setBalance('${u}')">Edit</button></td>
+        </tr>`).join("");
+}
+
+function setBalance(u) {
+    const amt = +prompt("Set new balance for " + u);
+    if (!amt && amt !== 0) return;
+    const users = JSON.parse(localStorage.users);
+    users[u].balance = amt;
+    localStorage.users = JSON.stringify(users);
+    loadAdmin();
+}
+</script>
+
+</body>
+  </html>
